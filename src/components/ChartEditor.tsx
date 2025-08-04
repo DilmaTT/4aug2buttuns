@@ -96,6 +96,7 @@ export const ChartEditor = ({ isMobileMode = false, chart, onBackToCharts, onSav
       fontSize: 16,
       fontColor: 'white',
       showLegend: true,
+      showRandomizer: false,
       legendOverrides: {},
       linkButtons: [
         { enabled: false, text: '', position: 'center', targetRangeId: '' },

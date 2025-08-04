@@ -96,7 +96,8 @@ export const ChartViewer = ({ isMobileMode = false, chart, allRanges, onBackToCh
   const { actionButtons } = useRangeContext();
   const [displayedRange, setDisplayedRange] = useState<Range | null>(null);
   const [showMatrixDialog, setShowMatrixDialog] = useState(false);
-  const [activeButton, setActiveButton] = useState<ChartButton | null>(null); // State to store the active button
+  const [activeButton, setActiveButton] = useState<ChartButton | null>(null);
+  const [randomNumber, setRandomNumber] = useState<number | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [dynamicBorderStyle, setDynamicBorderStyle] = useState<React.CSSProperties>({});
 
@@ -108,9 +109,7 @@ export const ChartViewer = ({ isMobileMode = false, chart, allRanges, onBackToCh
     handleResize();
     window.addEventListener('resize', handleResize);
 
-    // Universal border style calculation
     try {
-      // This code runs on the client, so `window` and `document` are available.
       const bgHslString = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
       if (!bgHslString) return;
 
@@ -123,18 +122,16 @@ export const ChartViewer = ({ isMobileMode = false, chart, allRanges, onBackToCh
 
       if (isNaN(h) || isNaN(s) || isNaN(l)) return;
 
-      // "15% brighter" -> L' = L + (100 - L) * 0.15
       const newL = l + (100 - l) * 0.15;
       const newBorderColor = `hsl(${h} ${s}% ${Math.min(100, newL)}%)`;
 
       setDynamicBorderStyle({
         borderColor: newBorderColor,
-        borderWidth: '1px', // 50% narrower than original 2px
+        borderWidth: '1px',
         borderStyle: 'solid'
       });
     } catch (error) {
       console.error("Could not calculate dynamic border color, falling back.", error);
-      // Fallback style in case of any error
       setDynamicBorderStyle({
         borderColor: 'hsl(var(--border))',
         borderWidth: '1px',
@@ -147,7 +144,6 @@ export const ChartViewer = ({ isMobileMode = false, chart, allRanges, onBackToCh
 
   const handleButtonClick = (button: ChartButton) => {
     if (button.type === 'label') {
-      // It's a label, do nothing on click.
       return;
     }
   
@@ -156,11 +152,17 @@ export const ChartViewer = ({ isMobileMode = false, chart, allRanges, onBackToCh
       return;
     }
   
-    // If it's a 'normal' button
     const linkedRange = allRanges.find(range => range.id === button.linkedItem);
     if (linkedRange) {
       setDisplayedRange(linkedRange);
-      setActiveButton(button); // Store the clicked button
+      setActiveButton(button);
+      
+      if (button.showRandomizer) {
+        setRandomNumber(Math.floor(Math.random() * 101));
+      } else {
+        setRandomNumber(null);
+      }
+
       setShowMatrixDialog(true);
     } else {
       alert("Привязанный диапазон не найден.");
@@ -171,24 +173,18 @@ export const ChartViewer = ({ isMobileMode = false, chart, allRanges, onBackToCh
     setShowMatrixDialog(false);
     setDisplayedRange(null);
     setActiveButton(null);
+    setRandomNumber(null);
   }
 
   const handleLinkButtonClick = (targetRangeId: string) => {
     const targetRange = allRanges.find(r => r.id === targetRangeId);
     if (targetRange) {
-      // We need to find the button that corresponds to this new range to update the legend and link buttons
-      const newActiveButton = chart.buttons.find(b => b.linkedItem === targetRangeId);
       setDisplayedRange(targetRange);
-      // If we find a button that links to this range, we can use its settings.
-      // Otherwise, we keep the current active button context for the legend.
-      // A better approach might be to just update the range and let the legend/buttons be driven by the original active button.
-      // Let's stick to just changing the range for now.
     } else {
       alert('Связанный ренж не найден!');
     }
   };
 
-  // Determine which actions are used in the currently displayed range
   const usedActions = React.useMemo(() => {
     if (!displayedRange) return [];
     
@@ -277,7 +273,20 @@ export const ChartViewer = ({ isMobileMode = false, chart, allRanges, onBackToCh
 
       <CustomDialog isOpen={showMatrixDialog} onClose={handleCloseDialog} isMobileMode={isMobileMode}>
           {displayedRange && (
-            <div>
+            <div className="relative pt-10">
+              {activeButton?.showRandomizer && randomNumber !== null && (
+                <div 
+                  className="absolute top-0 right-0 font-bold z-10 rounded-md"
+                  style={{ 
+                    fontSize: '20px', 
+                    color: 'white', 
+                    backgroundColor: '#0d0e12',
+                    padding: '4px 12px'
+                  }}
+                >
+                  {randomNumber}
+                </div>
+              )}
               <PokerMatrix
                 selectedHands={displayedRange.hands}
                 onHandSelect={() => {}}
